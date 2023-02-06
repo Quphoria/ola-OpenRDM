@@ -85,8 +85,6 @@ void OpenRDMWidget::findDevices() {
             description, 50,
             serial, 50);
 
-        ftdi_deinit(&ftdi);
-
         if (ret != 0) {
             OLA_WARN << "OPENRDM FTDI ERROR " << ret << ": " << ftdi.error_str;
         } else {
@@ -95,6 +93,8 @@ void OpenRDMWidget::findDevices() {
             sprintf(dev_str, "s:0x%04x:0x%04x:%s", OPENRDM_VID, OPENRDM_PID, serial);
             OLA_DEBUG << "OpenRDM Device Found: device_string='" << dev_str << "'";
         }
+
+        ftdi_deinit(&ftdi);
 
         dp = dp->next;
     }
