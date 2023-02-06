@@ -58,7 +58,7 @@ void rdm_thread(OpenRDMWidget *widget,
                 std::mutex rdm_mutex,
                 std::shared_ptr<std::queue<RDMMessage>> rdm_data,
                 std::mutex tod_mutex,
-                std::shared_ptr<std::unordered_set<UID>> tod,
+                std::shared_ptr<UIDSet> tod,
                 bool *exit_flag);
 
 class OpenRDMThread {
@@ -85,19 +85,19 @@ class OpenRDMThread {
         std::thread dmx_thread;
         std::thread rdm_thread;
 
-        auto dmx_sema = std::shared_ptr<counting_semaphore<SEMA_MAX>();
-        auto rdm_sema = std::shared_ptr<counting_semaphore<SEMA_MAX>(); 
-        auto dmx_mutex = std::mutex();
-        auto rdm_mutex = std::mutex();
-        auto dmx_data = std::shared_ptr<DMXMessage>();
-        auto rdm_data = std::shared_ptr<std::queue<RDMMessage>>();
+        std::shared_ptr<counting_semaphore<SEMA_MAX>> dmx_sema = std::shared_ptr<counting_semaphore<SEMA_MAX>>();
+        std::shared_ptr<counting_semaphore<SEMA_MAX>> rdm_sema = std::shared_ptr<counting_semaphore<SEMA_MAX>>(); 
+        std::mutex dmx_mutex;
+        std::mutex rdm_mutex;
+        std::shared_ptr<DMXMessage> dmx_data = std::shared_ptr<DMXMessage>();
+        std::shared_ptr<std::queue<RDMMessage>> rdm_data = std::shared_ptr<std::queue<RDMMessage>>();
         bool exit_flag = false;
 
-        auto tod_mutex = std::mutex();
-        auto tod = std::shared_ptr<UIDSet>(); 
+        std::mutex tod_mutex;
+        std::shared_ptr<UIDSet> tod = std::shared_ptr<UIDSet>(); 
         
         DISALLOW_COPY_AND_ASSIGN(OpenRDMThread);
-}
+};
 
 }  // namespace openrdm
 }  // namespace plugin

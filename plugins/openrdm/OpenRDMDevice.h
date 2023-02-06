@@ -18,7 +18,7 @@ namespace openrdm {
 class OpenRDMDevice : public Device {
  public:
   OpenRDMDevice(AbstractPlugin *owner,
-                const unsigned int &port_id
+                const unsigned int &port_id,
                 const std::string &device_string,
                 const unsigned int &dmx_refresh_ms,
                 const bool &rdm_enabled);

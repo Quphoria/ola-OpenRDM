@@ -45,7 +45,7 @@ class OpenRDMPlugin : public Plugin {
   bool SetDefaultPreferences();
 
   unsigned int GetOutputPortCount() const;
-  string GetPortDeviceString(unsigned int port) const;
+  std::string GetPortDeviceString(unsigned int port) const;
   unsigned int GetPortRefreshMS(unsigned int port) const;
   bool GetPortRDMEnabled(unsigned int port) const;
 
