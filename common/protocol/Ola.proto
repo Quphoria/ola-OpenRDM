@@ -69,6 +69,8 @@ enum PluginIds {
   OLA_PLUGIN_SPIDMX = 23;
   OLA_PLUGIN_NANOLEAF = 24;
 
+  OLA_PLUGIN_OPENRDM = 10010;
+
   /*
    * To obtain a new plugin ID, open a ticket at
    * https://github.com/OpenLightingProject/ola/issues/new

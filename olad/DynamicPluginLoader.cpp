@@ -123,6 +123,10 @@
 #include "plugins/dmx4linux/Dmx4LinuxPlugin.h"
 #endif  // USE_DMX4LINUX
 
+#ifdef USE_OPENRDM
+#include "plugins/openrdm/OpenRDMPlugin.h"
+#endif  // USE_OPENRDM
+
 namespace ola {
 
 using std::vector;
@@ -254,6 +258,11 @@ void DynamicPluginLoader::PopulatePlugins() {
   m_plugins.push_back(
       new ola::plugin::uartdmx::UartDmxPlugin(m_plugin_adaptor));
 #endif  // USE_UART
+
+#ifdef USE_OPENRDM
+  m_plugins.push_back(
+      new ola::plugin::openrdm::OpenRDMPlugin(m_plugin_adaptor));
+#endif  // USE_OPENRDM
 }
 
 void DynamicPluginLoader::UnloadPlugins() {
