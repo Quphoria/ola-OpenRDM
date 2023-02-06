@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <mutex>
 
 #include "plugins/openrdm/OpenRDMDriver.h"
 #include "plugins/openrdm/rdm.h"
@@ -20,7 +21,7 @@ class OpenRDMWidget {
         bool verbose, rdm_enabled, rdm_debug;
         OpenRDMWidget();
         OpenRDMWidget(std::string ftdi_description, bool verbose, bool rdm_enabled, bool rdm_debug);
-        OpenRDMWidget::~OpenRDMWidget();
+        ~OpenRDMWidget();
         bool init();
         void deinit();
         bool isInitialized();

@@ -9,6 +9,7 @@
 #include "olad/Port.h"
 #include "olad/Preferences.h"
 #include "plugins/openrdm/OpenRDMWidget.h"
+#include "plugins/openrdm/OpenRDMThread.h"
 
 namespace ola {
 namespace plugin {
@@ -23,7 +24,7 @@ class OpenRDMDevice : public Device {
                 const bool &rdm_enabled);
   ~OpenRDMDevice();
 
-  std::string DeviceId() const { return m_path; }
+  std::string DeviceId() const { return m_dev_str; }
   OpenRDMWidget* GetWidget() { return m_widget.get(); }
 
  protected:
@@ -55,9 +56,9 @@ class OpenRDMOutputPort : public ola::BasicOutputPort {
   void RunFullDiscovery(ola::rdm::RDMDiscoveryCallback *callback);
   void RunIncrementalDiscovery(ola::rdm::RDMDiscoveryCallback *callback);
 
-  std::string Description() const { return m_widget->Description(); }
+  std::string Description() const { return "OpenRDM Device:" + m_dev_str; }
 
-  string UniqueId() const { return "OpenRDM:" + m_dev_str; }
+  std::string UniqueId() const { return "OpenRDM:" + m_dev_str; }
 
  private:
   OpenRDMWidget *m_widget;

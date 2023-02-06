@@ -1,17 +1,6 @@
 #ifndef PLUGINS_OPENRDM_OPENRDMPLUGIN_H_
 #define PLUGINS_OPENRDM_OPENRDMPLUGIN_H_
 
-#include <memory>
-#include <set>
-#include <string>
-#include "ola/base/Macro.h"
-#include "ola/plugin_id.h"
-#include "olad/Plugin.h"
-
-namespace ola {
-namespace plugin {
-namespace openrdm {
-
 #include <set>
 #include <string>
 #include <vector>
@@ -19,11 +8,11 @@ namespace openrdm {
 #include "olad/Plugin.h"
 #include "ola/plugin_id.h"
 
-#include "plugins/ftdidmx/OpenRDMDevice.h"
+#include "plugins/openrdm/OpenRDMDevice.h"
 
 namespace ola {
 namespace plugin {
-namespace ftdidmx {
+namespace openrdm {
 
 
 class OpenRDMPlugin : public Plugin {

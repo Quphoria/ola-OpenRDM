@@ -60,7 +60,7 @@ bool OpenRDMThread::WriteDMX(const ola::DmxBuffer &buffer) {
     dmx_data->changed = true;
     dmx_mutex.unlock();
 
-    dmx_sema->release();
+    dmx_sema->notify();
 
     buffer.Reset();
 }
@@ -100,7 +100,7 @@ void OpenRDMThread::SendRDMRequest(ola::rdm::RDMRequest *request,
     rdm_mutex.unlock();
 
     if (ok) {
-        rdm_sema->release();
+        rdm_sema->notify();
     } else {
         RunRDMCallback(callback, ola::rdm::RDM_FAILED_TO_SEND);
     }
@@ -122,7 +122,7 @@ void OpenRDMThread::RunFullDiscovery(ola::rdm::RDMDiscoveryCallback *callback) {
     rdm_mutex.unlock();
 
     if (ok) {
-        rdm_sema->release();
+        rdm_sema->notify();
     } else {
         tod_mutex.lock();
         UIDSet uid_set = UIDSet(tod);
@@ -147,7 +147,7 @@ void OpenRDMThread::RunIncrementalDiscovery(ola::rdm::RDMDiscoveryCallback *call
     rdm_mutex.unlock();
 
     if (ok) {
-        rdm_sema->release();
+        rdm_sema->notify();
     } else {
         tod_mutex.lock();
         UIDSet uid_set = UIDSet(tod);
@@ -158,7 +158,7 @@ void OpenRDMThread::RunIncrementalDiscovery(ola::rdm::RDMDiscoveryCallback *call
 
 void dmx_thread(OpenRDMWidget *widget,
                 unsigned int dmx_refresh_ms,
-                std::shared_ptr<std::counting_semaphore<SEMA_MAX>> dmx_sema,
+                std::shared_ptr<counting_semaphore<SEMA_MAX>> dmx_sema,
                 std::mutex dmx_mutex,
                 std::shared_ptr<DMXMessage> dmx_data,
                 bool *exit_flag) {
@@ -172,7 +172,7 @@ void dmx_thread(OpenRDMWidget *widget,
     auto t_last = std::chrono::high_resolution_clock::now();
 
     while (!(*exit_flag)) {
-        bool sema_acquired = dmx_sema->try_acquire_for(dmx_timeout);
+        bool sema_acquired = dmx_sema->wait_for(dmx_timeout);
         if (sema_acquired) {
             dmx_mutex.lock();
             dmx_changed = dmx_data->changed;
@@ -205,7 +205,7 @@ void dmx_thread(OpenRDMWidget *widget,
 }
 
 void rdm_thread(OpenRDMWidget *widget,
-                std::shared_ptr<std::counting_semaphore<SEMA_MAX>> rdm_sema,
+                std::shared_ptr<counting_semaphore<SEMA_MAX>> rdm_sema,
                 std::mutex rdm_mutex,
                 std::shared_ptr<std::queue<RDMMessage>> rdm_data,
                 std::mutex tod_mutex,
@@ -219,7 +219,7 @@ void rdm_thread(OpenRDMWidget *widget,
     auto rdm_timeout = std::chrono::milliseconds(RDM_SEMA_TIMEOUT_MS);
 
     while (!(*exit_flag)) {
-        bool sema_acquired = sema->try_acquire_for(rdm_timeout);
+        bool sema_acquired = sema->wait_for(rdm_timeout);
         if (sema_acquired) {
             rdm_mutex.lock();
             // Handle RDM messages 1 message at a time so we don't halt the dmx too much

@@ -5,10 +5,8 @@
 #include <memory>
 #include <thread>
 #include <mutex>
-#include <semaphore>
 #include <array>
 #include <queue>
-#include <unordered_set>
 
 #include "ola/DmxBuffer.h"
 #include "ola/rdm/UID.h"
@@ -18,6 +16,7 @@
 #include "plugins/openrdm/OpenRDMWidget.h"
 #include "plugins/openrdm/rdm.h"
 #include "plugins/openrdm/dmx.h"
+#include "plugins/openrdm/Semaphore.h"
 
 namespace ola {
 namespace plugin {
@@ -49,13 +48,13 @@ struct DMXMessage {
 
 void dmx_thread(OpenRDMWidget *widget,
                 unsigned int dmx_refresh_ms,
-                std::shared_ptr<std::counting_semaphore<SEMA_MAX>> dmx_sema,
+                std::shared_ptr<counting_semaphore<SEMA_MAX>> dmx_sema,
                 std::mutex dmx_mutex,
                 std::shared_ptr<DMXMessage> dmx_data,
                 bool *exit_flag);
 
 void rdm_thread(OpenRDMWidget *widget,
-                std::shared_ptr<std::counting_semaphore<SEMA_MAX>> rdm_sema,
+                std::shared_ptr<counting_semaphore<SEMA_MAX>> rdm_sema,
                 std::mutex rdm_mutex,
                 std::shared_ptr<std::queue<RDMMessage>> rdm_data,
                 std::mutex tod_mutex,
@@ -86,8 +85,8 @@ class OpenRDMThread {
         std::thread dmx_thread;
         std::thread rdm_thread;
 
-        auto dmx_sema = std::shared_ptr<std::counting_semaphore<SEMA_MAX>();
-        auto rdm_sema = std::shared_ptr<std::counting_semaphore<SEMA_MAX>(); 
+        auto dmx_sema = std::shared_ptr<counting_semaphore<SEMA_MAX>();
+        auto rdm_sema = std::shared_ptr<counting_semaphore<SEMA_MAX>(); 
         auto dmx_mutex = std::mutex();
         auto rdm_mutex = std::mutex();
         auto dmx_data = std::shared_ptr<DMXMessage>();
