@@ -85,16 +85,25 @@ class OpenRDMThread {
         std::thread dmx_thread;
         std::thread rdm_thread;
 
-        std::shared_ptr<counting_semaphore<SEMA_MAX>> dmx_sema = std::shared_ptr<counting_semaphore<SEMA_MAX>>();
-        std::shared_ptr<counting_semaphore<SEMA_MAX>> rdm_sema = std::shared_ptr<counting_semaphore<SEMA_MAX>>(); 
-        std::shared_ptr<std::mutex> dmx_mutex;
-        std::shared_ptr<std::mutex> rdm_mutex;
-        std::shared_ptr<DMXMessage> dmx_data = std::shared_ptr<DMXMessage>();
-        std::shared_ptr<std::queue<RDMMessage>> rdm_data = std::shared_ptr<std::queue<RDMMessage>>();
-        std::shared_ptr<bool> exit_flag;
+        std::shared_ptr<counting_semaphore<SEMA_MAX>> dmx_sema =
+            std::shared_ptr<counting_semaphore<SEMA_MAX>>(new counting_semaphore<SEMA_MAX>());
+        std::shared_ptr<counting_semaphore<SEMA_MAX>> rdm_sema =
+            std::shared_ptr<counting_semaphore<SEMA_MAX>>(new counting_semaphore<SEMA_MAX>()); 
+        std::shared_ptr<std::mutex> dmx_mutex =
+            std::shared_ptr<std::mutex>(new std::mutex());
+        std::shared_ptr<std::mutex> rdm_mutex =
+            std::shared_ptr<std::mutex>(new std::mutex());
+        std::shared_ptr<DMXMessage> dmx_data =
+            std::shared_ptr<DMXMessage>(new DMXMessage());
+        std::shared_ptr<std::queue<RDMMessage>> rdm_data =
+            std::shared_ptr<std::queue<RDMMessage>>(new std::queue<RDMMessage>());
+        std::shared_ptr<bool> exit_flag =
+            std::shared_ptr<bool>(new bool);
 
-        std::shared_ptr<std::mutex> tod_mutex;
-        std::shared_ptr<UIDSet> tod = std::shared_ptr<UIDSet>(); 
+        std::shared_ptr<std::mutex> tod_mutex =
+            std::shared_ptr<std::mutex>(new std::mutex());
+        std::shared_ptr<UIDSet> tod =
+            std::shared_ptr<UIDSet>(new UIDSet()); 
         
         DISALLOW_COPY_AND_ASSIGN(OpenRDMThread);
 };

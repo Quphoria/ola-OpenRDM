@@ -62,15 +62,18 @@ bool OpenRDMWidget::isInitialized() { return initialized; }
 void OpenRDMWidget::findDevices() {
     struct ftdi_context ftdi;
     struct ftdi_device_list *devlist;
+
+    OLA_DEBUG << "OPENRDM Finding Devices";
     
     ftdi_init(&ftdi);
     int ret = ftdi_usb_find_all(&ftdi, &devlist, OPENRDM_VID, OPENRDM_PID);
-    ftdi_deinit(&ftdi);
     if (ret < 0) {
         OLA_WARN << "OPENRDM FTDI ERROR " << ret << ": " << ftdi.error_str;
+        ftdi_deinit(&ftdi);
         ftdi_list_free(&devlist);
         return;
     }
+    ftdi_deinit(&ftdi);
 
     struct ftdi_device_list *dp = devlist;
     while (dp) {

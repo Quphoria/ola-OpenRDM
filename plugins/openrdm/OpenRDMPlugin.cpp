@@ -119,7 +119,7 @@ bool OpenRDMPlugin::SetDefaultPreferences() {
   
   for (unsigned int i = 0; i < GetOutputPortCount(); i++) {
     save |= m_preferences->SetDefaultValue(ExpandTemplate(K_PORT_DEVICE_TEMPL, i),
-                                           StringValidator(),
+                                           StringValidator(true),
                                            DEFAULT_PORT_DEVICE);
 
     save |= m_preferences->SetDefaultValue(ExpandTemplate(K_PORT_REFRESH_TEMPL, i),
@@ -143,10 +143,6 @@ bool OpenRDMPlugin::SetDefaultPreferences() {
   }
 
   for (unsigned int i = 0; i < port_count; i++) {
-    if (m_preferences->GetValue(ExpandTemplate(K_PORT_DEVICE_TEMPL, i)).empty()) {
-      return false;
-    }
-
     if (m_preferences->GetValue(ExpandTemplate(K_PORT_REFRESH_TEMPL, i)).empty()) {
       return false;
     }

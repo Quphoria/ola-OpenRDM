@@ -11,7 +11,7 @@ namespace openrdm {
 
 using std::string;
 
-bool verbose = false;
+bool verbose = true;
 bool rdm_debug = false;
 
 OpenRDMDevice::OpenRDMDevice(AbstractPlugin *owner,
@@ -19,7 +19,7 @@ OpenRDMDevice::OpenRDMDevice(AbstractPlugin *owner,
                              const std::string &device_string,
                              const unsigned int &dmx_refresh_ms,
                              const bool &rdm_enabled)
-    : Device(owner, device_string),
+    : Device(owner, "OpenRDM"),
       m_port_id(port_id),
       m_dev_str(device_string),
       m_dmx_refresh_ms(dmx_refresh_ms),
@@ -46,11 +46,17 @@ OpenRDMOutputPort::OpenRDMOutputPort(OpenRDMDevice *parent,
                                      bool rdm_enabled)
   : BasicOutputPort(parent, id, rdm_enabled, rdm_enabled),
     m_widget(widget),
+    m_port_id(id),
     m_thread(widget, dmx_refresh_ms, rdm_enabled),
     m_dev_str(device_string),
     m_dmx_refresh_ms(dmx_refresh_ms),
     m_rdm_enabled(rdm_enabled) {
-  m_thread.Start();
+  if (m_widget->init()) {
+    OLA_DEBUG << "OpenRDM Port " << id << " (" << device_string << ") Initialized";
+    m_thread.Start();
+  } else {
+    OLA_WARN << "OpenRDM Port " << id << " (" << device_string << ") Failed to Initialize";
+  }
 }
 
 OpenRDMOutputPort::~OpenRDMOutputPort() {

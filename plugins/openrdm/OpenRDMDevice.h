@@ -24,7 +24,7 @@ class OpenRDMDevice : public Device {
                 const bool &rdm_enabled);
   ~OpenRDMDevice();
 
-  std::string Description() const { return "OpenRDM Device:" + m_dev_str; }
+  std::string Description() const { return "OpenRDM Device " + std::to_string(m_port_id) + ":" + m_dev_str; }
   std::string DeviceId() const { return m_dev_str; }
   OpenRDMWidget* GetWidget() { return m_widget; }
 
@@ -57,12 +57,13 @@ class OpenRDMOutputPort : public ola::BasicOutputPort {
   void RunFullDiscovery(ola::rdm::RDMDiscoveryCallback *callback);
   void RunIncrementalDiscovery(ola::rdm::RDMDiscoveryCallback *callback);
 
-  std::string Description() const { return "OpenRDM Device:" + m_dev_str; }
+  std::string Description() const { return "OpenRDM Port " + std::to_string(m_port_id) + ":" + m_dev_str; }
 
   std::string UniqueId() const { return "OpenRDM:" + m_dev_str; }
 
  private:
   OpenRDMWidget *m_widget;
+  unsigned int m_port_id;
   OpenRDMThread m_thread;
   const std::string m_dev_str;
   unsigned int m_dmx_refresh_ms;

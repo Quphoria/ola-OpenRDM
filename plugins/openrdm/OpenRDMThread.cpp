@@ -1,6 +1,7 @@
 #include <vector>
 #include <string>
 
+#include "ola/Logging.h"
 #include "ola/rdm/RDMCommand.h"
 #include "ola/rdm/RDMCommandSerializer.h"
 #include "plugins/openrdm/OpenRDMThread.h"
@@ -60,7 +61,8 @@ void OpenRDMThread::Stop() {
 
 bool OpenRDMThread::WriteDMX(const ola::DmxBuffer &buffer) {
     dmx_mutex->lock();
-    buffer.Get(dmx_data->data.begin(), &dmx_data->length);
+    dmx_data->length = DMX_MAX_LENGTH;
+    buffer.Get(dmx_data->data.data(), &dmx_data->length);
     dmx_data->changed = true;
     dmx_mutex->unlock();
 
@@ -201,6 +203,8 @@ void dmx_thread_f(OpenRDMWidget *widget,
             std::copy_n(dmx_data->data.data(), length, data);
             dmx_mutex->unlock();
 
+            // OLA_DEBUG << "DMX OUTPUT TIMEOUT: " << data[0] << ", " << data[1];
+
             widget->writeDMX(data, length);
             t_last = std::chrono::high_resolution_clock::now();
         }
@@ -232,7 +236,7 @@ void rdm_thread_f(OpenRDMWidget *widget,
 
                 if (msg.type == RDM_DATA) {
                     uint8_t data[512];
-                    unsigned int actual_len;
+                    unsigned int actual_len = DMX_MAX_LENGTH;
                     bool ok = RDMCommandSerializer::Pack(*(msg.request), data, &actual_len);
 
                     if (ok) {
