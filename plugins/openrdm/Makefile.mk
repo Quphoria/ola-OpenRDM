@@ -24,7 +24,6 @@ plugins_openrdm_libolaopenrdm_la_SOURCES = \
     plugins/openrdm/dmx.h \
     plugins/openrdm/rdm.cpp \
     plugins/openrdm/rdm.h \
-    plugins/openrdm/Semaphore.cpp \
     plugins/openrdm/Semaphore.h
 plugins_openrdm_libolaopenrdm_la_LIBADD = \
     common/libolacommon.la \
