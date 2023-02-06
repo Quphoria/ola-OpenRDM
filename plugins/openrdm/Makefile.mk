@@ -36,4 +36,6 @@ else
 plugins_openrdm_libolaopenrdm_la_LIBADD += $(libftdi0_LIBS)
 endif
 
+endif
+
 EXTRA_DIST += plugins/openrdm/README.md
