@@ -12,6 +12,8 @@ namespace openrdm {
 using ola::rdm::UID;
 using ola::rdm::UIDSet;
 using ola::rdm::RDMReply;
+using ola::rdm::RDMCommand;
+using ola::rdm::RDMCommandSerializer;
 
 OpenRDMThread::OpenRDMThread(OpenRDMWidget *widget,
                       unsigned int dmx_refresh_ms,
@@ -27,42 +29,44 @@ OpenRDMThread::~OpenRDMThread() {
 }
 
 void OpenRDMThread::Start() {
-    dmx_thread = std::thread(dmx_thread,
+    *exit_flag = false;
+
+    dmx_thread = std::thread(dmx_thread_f,
                              m_widget,
                              m_dmx_refresh_ms,
                              dmx_sema,
                              dmx_mutex,
                              dmx_data,
-                             &exit_flag);
+                             exit_flag);
     if (m_rdm_enabled) {
-        rdm_thread = std::thread(rdm_thread,
+        rdm_thread = std::thread(rdm_thread_f,
                                  m_widget,
                                  rdm_sema,
                                  rdm_mutex,
                                  rdm_data,
                                  tod_mutex,
                                  tod,
-                                 &exit_flag);
+                                 exit_flag);
     }
     threads_running = true;
 }
 
 void OpenRDMThread::Stop() {
-    exit_flag = true;
+    *exit_flag = true;
     dmx_thread.join();
     rdm_thread.join();
     threads_running = false;
 }
 
 bool OpenRDMThread::WriteDMX(const ola::DmxBuffer &buffer) {
-    dmx_mutex.lock();
+    dmx_mutex->lock();
     buffer.Get(dmx_data->data.begin(), &dmx_data->length);
     dmx_data->changed = true;
-    dmx_mutex.unlock();
+    dmx_mutex->unlock();
 
     dmx_sema->notify();
 
-    buffer.Reset();
+    return true;
 }
 
 void OpenRDMThread::SendRDMRequest(ola::rdm::RDMRequest *request,
@@ -72,32 +76,31 @@ void OpenRDMThread::SendRDMRequest(ola::rdm::RDMRequest *request,
         return;
     }
     if (request->CommandClass() == RDMCommand::DISCOVER_COMMAND) {
-        RunRDMCallback(on_complete, ola::rdm::RDM_PLUGIN_DISCOVERY_NOT_SUPPORTED);
+        RunRDMCallback(callback, ola::rdm::RDM_PLUGIN_DISCOVERY_NOT_SUPPORTED);
         return;
     }
     
-    tod_mutex.lock();
+    tod_mutex->lock();
     if (!tod->Contains(request->DestinationUID())) {
         RunRDMCallback(callback, ola::rdm::RDM_UNKNOWN_UID);
         return;
     }
-    tod_mutex.unlock();
+    tod_mutex->unlock();
 
     RDMMessage msg;
-    unsigned int length;
     msg.type = RDM_DATA;
     msg.request = request;
     msg.rdm_callback = callback;
     
     bool ok = true;
 
-    rdm_mutex.lock();
+    rdm_mutex->lock();
     if (rdm_data->size() < RDM_QUEUE_MAX_LENGTH) {
         rdm_data->push(msg);
     } else {
         ok = false;
     }
-    rdm_mutex.unlock();
+    rdm_mutex->unlock();
 
     if (ok) {
         rdm_sema->notify();
@@ -108,60 +111,60 @@ void OpenRDMThread::SendRDMRequest(ola::rdm::RDMRequest *request,
 
 void OpenRDMThread::RunFullDiscovery(ola::rdm::RDMDiscoveryCallback *callback) {
     RDMMessage msg;
-    msg.length = RDM_FULL_DISCOVERY;
+    msg.type = RDM_FULL_DISCOVERY;
     msg.disc_callback = callback;
 
     bool ok = true;
 
-    rdm_mutex.lock();
+    rdm_mutex->lock();
     if (rdm_data->size() < RDM_QUEUE_MAX_LENGTH) {
         rdm_data->push(msg);
     } else {
         ok = false;
     }
-    rdm_mutex.unlock();
+    rdm_mutex->unlock();
 
     if (ok) {
         rdm_sema->notify();
     } else {
-        tod_mutex.lock();
-        UIDSet uid_set = UIDSet(tod);
-        tod_mutex.unlock();
+        tod_mutex->lock();
+        UIDSet uid_set = UIDSet(*tod);
+        tod_mutex->unlock();
         callback->Run(uid_set);
     }
 }
 
 void OpenRDMThread::RunIncrementalDiscovery(ola::rdm::RDMDiscoveryCallback *callback) {
     RDMMessage msg;
-    msg.length = RDM_INCREMENTAL_DISCOVERY;
+    msg.type = RDM_INCREMENTAL_DISCOVERY;
     msg.disc_callback = callback;
 
     bool ok = true;
 
-    rdm_mutex.lock();
+    rdm_mutex->lock();
     if (rdm_data->size() < RDM_QUEUE_MAX_LENGTH) {
         rdm_data->push(msg);
     } else {
         ok = false;
     }
-    rdm_mutex.unlock();
+    rdm_mutex->unlock();
 
     if (ok) {
         rdm_sema->notify();
     } else {
-        tod_mutex.lock();
-        UIDSet uid_set = UIDSet(tod);
-        tod_mutex.unlock();
+        tod_mutex->lock();
+        UIDSet uid_set = UIDSet(*tod);
+        tod_mutex->unlock();
         callback->Run(uid_set);
     }
 }
 
-void dmx_thread(OpenRDMWidget *widget,
+void dmx_thread_f(OpenRDMWidget *widget,
                 unsigned int dmx_refresh_ms,
                 std::shared_ptr<counting_semaphore<SEMA_MAX>> dmx_sema,
-                std::mutex dmx_mutex,
+                std::shared_ptr<std::mutex> dmx_mutex,
                 std::shared_ptr<DMXMessage> dmx_data,
-                bool *exit_flag) {
+                std::shared_ptr<bool> exit_flag) {
     if (!widget->isInitialized()) return;
 
     auto dmx_timeout = std::chrono::milliseconds(dmx_refresh_ms);
@@ -174,14 +177,14 @@ void dmx_thread(OpenRDMWidget *widget,
     while (!(*exit_flag)) {
         bool sema_acquired = dmx_sema->wait_for(dmx_timeout);
         if (sema_acquired) {
-            dmx_mutex.lock();
+            dmx_mutex->lock();
             dmx_changed = dmx_data->changed;
             if (dmx_changed) {
                 length = dmx_data->length;
                 std::copy_n(dmx_data->data.data(), length, data);
                 dmx_data->changed = false;
             }
-            dmx_mutex.unlock();
+            dmx_mutex->unlock();
 
             if (dmx_changed) {
                 widget->writeDMX(data, length);
@@ -193,10 +196,10 @@ void dmx_thread(OpenRDMWidget *widget,
         double elapsed_time_ms = std::chrono::duration<double, std::milli>(t_now-t_last).count();
         if (!sema_acquired || elapsed_time_ms > dmx_refresh_ms) {
             // Timed out, DMX refresh
-            dmx_mutex.lock();
+            dmx_mutex->lock();
             length = dmx_data->length;
             std::copy_n(dmx_data->data.data(), length, data);
-            dmx_mutex.unlock();
+            dmx_mutex->unlock();
 
             widget->writeDMX(data, length);
             t_last = std::chrono::high_resolution_clock::now();
@@ -204,13 +207,13 @@ void dmx_thread(OpenRDMWidget *widget,
     }
 }
 
-void rdm_thread(OpenRDMWidget *widget,
+void rdm_thread_f(OpenRDMWidget *widget,
                 std::shared_ptr<counting_semaphore<SEMA_MAX>> rdm_sema,
-                std::mutex rdm_mutex,
+                std::shared_ptr<std::mutex> rdm_mutex,
                 std::shared_ptr<std::queue<RDMMessage>> rdm_data,
-                std::mutex tod_mutex,
-                std::shared_ptr<std::set<UID>> tod,
-                bool *exit_flag) {
+                std::shared_ptr<std::mutex> tod_mutex,
+                std::shared_ptr<UIDSet> tod,
+                std::shared_ptr<bool> exit_flag) {
     // Not too fussed about RDM working just yet
     // Get DMX working first
     return;
@@ -219,9 +222,9 @@ void rdm_thread(OpenRDMWidget *widget,
     auto rdm_timeout = std::chrono::milliseconds(RDM_SEMA_TIMEOUT_MS);
 
     while (!(*exit_flag)) {
-        bool sema_acquired = sema->wait_for(rdm_timeout);
+        bool sema_acquired = rdm_sema->wait_for(rdm_timeout);
         if (sema_acquired) {
-            rdm_mutex.lock();
+            rdm_mutex->lock();
             // Handle RDM messages 1 message at a time so we don't halt the dmx too much
             if (!rdm_data->empty()) {
                 auto msg = rdm_data->front();
@@ -235,15 +238,15 @@ void rdm_thread(OpenRDMWidget *widget,
                     if (ok) {
                         // Check SUB START CODE (in case new RDM version has different packet structure)
                         if (actual_len > 2 && data[0] == RDM_SUB_START_CODE) {
-                            actual_len = std::min(actual_len, 1+data[1]);
+                            actual_len = std::min(actual_len, (unsigned int )(1+data[1]));
                         }
                         auto resp = widget->writeRDM(data, actual_len);
                         if (resp.first > 1 && resp.second[0] == RDM_START_CODE) {
                             std::auto_ptr<RDMReply> reply(RDMReply::FromFrame(
-                                rdm::RDMFrame(resp.second, resp.first)
+                                rdm::RDMFrame(resp.second.data(), resp.first)
                             ));
                             msg.rdm_callback->Run(reply.get());
-                        } else if (request->DestinationUID().IsBroadcast()) {
+                        } else if (msg.request->DestinationUID().IsBroadcast()) {
                             RDMReply reply(ola::rdm::RDM_WAS_BROADCAST);
                             msg.rdm_callback->Run(&reply);
                         } else {
@@ -251,26 +254,26 @@ void rdm_thread(OpenRDMWidget *widget,
                             msg.rdm_callback->Run(&reply);
                         }
                     } else {
-                        RunRDMCallback(msg.disc_callback, ola::rdm::RDM_FAILED_TO_SEND);
+                        RunRDMCallback(msg.rdm_callback, ola::rdm::RDM_FAILED_TO_SEND);
                     }
-                } else if (msg.length == RDM_FULL_DISCOVERY) {
+                } else if (msg.type == RDM_FULL_DISCOVERY) {
                     auto new_tod = widget->fullRDMDiscovery();
-                    tod_mutex.lock();
+                    tod_mutex->lock();
                     *tod = new_tod;
-                    tod_mutex.unlock();
+                    tod_mutex->unlock();
                     msg.disc_callback->Run(new_tod);
-                } else if (msg.length == RDM_INCREMENTAL_DISCOVERY) {
+                } else if (msg.type == RDM_INCREMENTAL_DISCOVERY) {
                     auto tod_changes = widget->incrementalRDMDiscovery();
                     auto added = tod_changes.first;
                     auto removed = tod_changes.second;
-                    tod_mutex.lock();
-                    *tod = tod->Union(added).SetDifference(removed);
-                    UIDSet uid_set = UIDSet(tod);
-                    tod_mutex.unlock();
-                    msg.disc_callback->Run(uid_set);
+                    tod_mutex->lock();
+                    auto new_tod = tod->Union(added).SetDifference(removed);
+                    *tod = new_tod;
+                    tod_mutex->unlock();
+                    msg.disc_callback->Run(new_tod);
                 }
             }
-            rdm_mutex.unlock();
+            rdm_mutex->unlock();
         }
     }
 }

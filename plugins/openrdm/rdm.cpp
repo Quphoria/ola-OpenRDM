@@ -21,19 +21,20 @@ RDMPacket::RDMPacket() :dest(UID(0,0)),src(UID(0,0)) {}
 
 RDMPacket::RDMPacket(UID dest, UID src, uint8_t tn, uint8_t port_id, uint8_t message_count, uint16_t sub_device,
         uint8_t cc, uint16_t pid, uint8_t pdl, const RDMPacketData &pdata)
-        :dest(dest), src(src),
-        transaction_number(tn),
+        : transaction_number(tn),
+        cc(cc), pid(pid), pdl(pdl),
+        dest(dest), src(src),
         port_id_resp_type(port_id),
         message_count(message_count),
-        sub_device(sub_device),
-        cc(cc), pid(pid), pdl(pdl) {
+        sub_device(sub_device) {
     this->pdata = RDMPacketData();
     if (pdl > 0)
         std::copy_n(pdata.begin(), std::min(RDM_MAX_PDL, (unsigned int)pdl), this->pdata.begin());
     this->valid = true;
 }
 
-RDMPacket::RDMPacket(UID uid, const RDMData &data, size_t length) { // The first byte of data is Start Code
+RDMPacket::RDMPacket(UID uid, const RDMData &data, size_t length)
+        :dest(UID(0,0)),src(UID(0,0)) { // The first byte of data is Start Code
     if (length < 26) return; // Invalid packet length
     if (data[0] != RDM_START_CODE) return; // Incorrect sub start code
     if (data[1] != RDM_SUB_START_CODE) return; // Incorrect sub start code
@@ -91,7 +92,8 @@ bool RDMPacket::isValid() { return valid; }
 uint8_t RDMPacket::getRespType() { return port_id_resp_type; }
 UID RDMPacket::getSrc() { return src; }
 
-DiscoveryResponseRDMPacket::DiscoveryResponseRDMPacket(const RDMData &data, size_t length) {
+DiscoveryResponseRDMPacket::DiscoveryResponseRDMPacket(const RDMData &data, size_t length)
+        : uid(UID(0, 0)) {
     if (length < 17) return;
     size_t i = 0;
     if (data[i] == RDM_START_CODE) i++;

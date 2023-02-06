@@ -4,6 +4,7 @@
 #include <chrono>
 #include <memory>
 
+#include "ola/Logging.h"
 #include "plugins/openrdm/OpenRDMWidget.h"
 
 namespace ola {
@@ -13,20 +14,22 @@ namespace openrdm {
 using ola::rdm::UID;
 using ola::rdm::UIDSet;
 
-OpenRDMWidget::OpenRDMWidget() {
+OpenRDMWidget::OpenRDMWidget()
+        :uid(UID(0, 0)) {
     this->ftdi_description = "";
     this->verbose = 0;
     this->rdm_enabled = false;
     this->rdm_debug = false;
-    this->dev_mutex = std::make_unique<std::mutex>();
+    this->dev_mutex = std::unique_ptr<std::mutex>(new std::mutex());
 }
 
-OpenRDMWidget::OpenRDMWidget(std::string ftdi_description, bool verbose, bool rdm_enabled, bool rdm_debug) {
+OpenRDMWidget::OpenRDMWidget(std::string ftdi_description, bool verbose, bool rdm_enabled, bool rdm_debug)
+        :uid(UID(0, 0)) {
     this->ftdi_description = ftdi_description;
     this->verbose = verbose;
     this->rdm_enabled = rdm_enabled;
     this->rdm_debug = rdm_debug;
-    this->dev_mutex = std::make_unique<std::mutex>();
+    this->dev_mutex = std::unique_ptr<std::mutex>(new std::mutex());
 }
 
 OpenRDMWidget::~OpenRDMWidget() {
@@ -133,11 +136,14 @@ UIDSet OpenRDMWidget::fullRDMDiscovery() {
     proxies = UIDSet();
 
     bool NA = false;
-    sendMute(RDM_UID_BROADCAST, true, NA); // Unmute everything
+    sendMute(UID(RDM_UID_BROADCAST), true, NA); // Unmute everything
     tod = discover(0, RDM_UID_MAX);
 
     if (verbose) {
-        for (auto &uid : tod) printf("RDM Device Discovered: ", uid.ToString(), "\n");
+        for (auto it = tod.Begin(); it != tod.End(); it++) {
+            auto uid = *it;
+            OLA_DEBUG << "RDM Device Discovered: " << uid.ToString();
+        }
     }
 
     discovery_in_progress = false;
@@ -152,10 +158,11 @@ std::pair<UIDSet, UIDSet> OpenRDMWidget::incrementalRDMDiscovery() {
     auto new_lost = UIDSet();
     auto new_proxies = UIDSet();
     bool NA;
-    sendMute(RDM_UID_BROADCAST, true, NA); // Unmute everything
+    sendMute(UID(RDM_UID_BROADCAST), true, NA); // Unmute everything
     // Check tod devices are still there and lost devices are still lost
     // This also mutes devices we know about
-    for (auto &uid : tod) {
+    for (auto it = tod.Begin(); it != tod.End(); it++) {
+        auto uid = *it;
         bool is_proxy = false;
         if (!sendMute(uid, false, is_proxy)) {
             new_lost.AddUID(uid);
@@ -169,7 +176,8 @@ std::pair<UIDSet, UIDSet> OpenRDMWidget::incrementalRDMDiscovery() {
             }
         }
     }
-    for (auto &uid : lost) {
+    for (auto it = lost.Begin(); it != lost.End(); it++) {
+        auto uid = *it;
         bool is_proxy = false;
         if (sendMute(uid, false, is_proxy)) {
             found.AddUID(uid);
@@ -184,7 +192,8 @@ std::pair<UIDSet, UIDSet> OpenRDMWidget::incrementalRDMDiscovery() {
 
     auto discovered = discover(0, RDM_UID_MAX);
     
-    for (auto &proxy_uid : proxies) {
+    for (auto it = proxies.Begin(); it != proxies.End(); it++) {
+        auto proxy_uid = *it;
         // If proxy is not in new_proxies, don't bother checking if its TOD has changed as we want to scan anyway
         if (!new_proxies.Contains(proxy_uid)) {
             if (!hasProxyTODChanged(proxy_uid)) continue;
@@ -193,7 +202,8 @@ std::pair<UIDSet, UIDSet> OpenRDMWidget::incrementalRDMDiscovery() {
         discovered = discovered.Union(new_proxy_tod);
     }
 
-    for (auto &uid : discovered) {
+    for (auto it = discovered.Begin(); it != discovered.End(); it++) {
+        auto uid = *it;
         // If we find a device that has been found as lost, but it isn't, remove it from lost
         new_lost.RemoveUID(uid);
         // Merge into found if unique and new
@@ -207,21 +217,27 @@ std::pair<UIDSet, UIDSet> OpenRDMWidget::incrementalRDMDiscovery() {
     lost = lost.Union(new_lost).SetDifference(found);
 
     if (verbose) {
-        for (auto &uid : new_lost) printf("RDM Device Lost: ", uid.ToString(), "\n");
-        for (auto &uid : found) printf("RDM Device Discovered: ", uid.ToString(), "\n");
+        for (auto it = new_lost.Begin(); it != new_lost.End(); it++) {
+            auto uid = *it;
+            OLA_DEBUG << "RDM Device Lost: " << uid.ToString();
+        }
+        for (auto it = found.Begin(); it != found.End(); it++) {
+            auto uid = *it;
+            OLA_DEBUG << "RDM Device Discovered: " << uid.ToString();
+        }
     }
 
     discovery_in_progress = false;
     return std::make_pair(found, new_lost);
 }
 
-UIDSet OpenRDMWidget::discover(UID start, UID end) {
-    UID mute_uid = start;
+UIDSet OpenRDMWidget::discover(uint64_t start, uint64_t end) {
+    UID mute_uid = UID(start);
     if (start != end) {
         auto disc_msg_data = RDMPacketData();
-        start.Pack(disc_msg_data.begin(), disc_msg_data.size())
-        end.Pack(disc_msg_data.begin()+RDM_UID_LENGTH, disc_msg_data.size()-RDM_UID_LENGTH)
-        auto disc_msg = RDMPacket(RDM_UID_BROADCAST, uid, rdm_transaction_number++, 0x1, 0, 0,
+        UID(start).Pack(disc_msg_data.begin(), disc_msg_data.size());
+        UID(end).Pack(disc_msg_data.begin()+RDM_UID_LENGTH, disc_msg_data.size()-RDM_UID_LENGTH);
+        auto disc_msg = RDMPacket(UID(RDM_UID_BROADCAST), uid, rdm_transaction_number++, 0x1, 0, 0,
             RDM_CC_DISCOVER, RDM_PID_DISC_UNIQUE_BRANCH, RDM_UID_LENGTH*2, disc_msg_data);
         auto disc_msg_packet = RDMData();
         size_t msg_len = disc_msg.writePacket(disc_msg_packet);
@@ -251,7 +267,7 @@ UIDSet OpenRDMWidget::discover(UID start, UID end) {
                 printf("Invalid discovery response\n");
             }
             uint64_t lower_half_size = (end-start+1) / 2; // Start and end inclusive
-            UID lower_half_max = start+lower_half_size-1; // Start inclusive
+            uint64_t lower_half_max = start+lower_half_size-1; // Start inclusive
             auto lower_half = discover(start, lower_half_max);
             auto upper_half = discover(lower_half_max+1, end);
             return lower_half.Union(upper_half);
@@ -303,8 +319,8 @@ bool OpenRDMWidget::sendMute(UID addr, bool unmute, bool &is_proxy) {
         RDM_CC_DISCOVER, unmute ? RDM_PID_DISC_UNMUTE : RDM_PID_DISC_MUTE,
         0, RDMPacketData());
     if (this->rdm_debug) {
-        if (unmute) printf("Sending UNMUTE to %06lx\n", addr);
-        else printf("Sending MUTE to %06lx\n", addr);
+        if (unmute) OLA_DEBUG << "Sending UNMUTE to " << addr;
+        else OLA_DEBUG << "Sending MUTE to " << addr;
     }
 
     auto resp = sendRDMPacket(mute_msg);
@@ -317,8 +333,8 @@ bool OpenRDMWidget::sendMute(UID addr, bool unmute, bool &is_proxy) {
     }
 
     if (this->rdm_debug) {
-        if (unmute) printf("UNMUTE Response from %06lx\n", addr);
-        else printf("MUTE Response from %06lx\n", addr);
+        if (unmute) OLA_DEBUG << "UNMUTE Response from " << addr;
+        else OLA_DEBUG << "MUTE Response from " << addr;
     }
 
     return true;

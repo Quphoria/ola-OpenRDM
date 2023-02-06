@@ -24,14 +24,15 @@ class OpenRDMDevice : public Device {
                 const bool &rdm_enabled);
   ~OpenRDMDevice();
 
+  std::string Description() const { return "OpenRDM Device:" + m_dev_str; }
   std::string DeviceId() const { return m_dev_str; }
-  OpenRDMWidget* GetWidget() { return m_widget.get(); }
+  OpenRDMWidget* GetWidget() { return m_widget; }
 
  protected:
   bool StartHook();
 
  private:
-  std::auto_ptr<OpenRDMWidget> m_widget;
+  OpenRDMWidget *m_widget;
   unsigned int m_port_id;
   const std::string m_dev_str;
   unsigned int m_dmx_refresh_ms;

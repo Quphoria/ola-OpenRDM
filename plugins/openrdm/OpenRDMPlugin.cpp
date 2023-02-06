@@ -16,7 +16,6 @@ namespace openrdm {
 using std::string;
 using std::vector;
 
-
 const char OpenRDMPlugin::PLUGIN_NAME[] = "OpenRDM";
 const char OpenRDMPlugin::PLUGIN_PREFIX[] = "openrdm";
 
@@ -26,6 +25,8 @@ const char OpenRDMPlugin::K_OUTPUT_PORTS[] = "output_ports";
 const char OpenRDMPlugin::K_PORT_DEVICE_TEMPL[] = "port_%d_device";
 const char OpenRDMPlugin::K_PORT_REFRESH_TEMPL[] = "port_%d_dmx_refresh_ms";
 const char OpenRDMPlugin::K_PORT_RDM_TEMPL[] = "port_%d_rdm_enabled";
+
+string ExpandTemplate(const string &str, unsigned int value);
 
 /**
  * @brief Attempt to start a device and, if successful, register it
@@ -71,7 +72,7 @@ bool OpenRDMPlugin::StartHook() {
       auto refresh_ms = GetPortRefreshMS(i);
       auto rdm_enabled = GetPortRDMEnabled(i);
 
-      AddDevice(new OpenRDMDevice(this, dev_str, refresh_ms, rdm_enabled));
+      AddDevice(new OpenRDMDevice(this, i, dev_str, refresh_ms, rdm_enabled));
     }
   }
 
@@ -202,6 +203,17 @@ bool OpenRDMPlugin::GetPortRDMEnabled(unsigned int port) const {
     return DEFAULT_RDM_ENABLED;
   }
   return rdm_enabled;
+}
+
+string ExpandTemplate(const string &str, unsigned int value) {
+  string output = str;
+  // find the first instance of "%d" in the string.
+  size_t pos = output.find("%d");
+  if (pos != string::npos) {
+    // %d was found, perform the replacement.
+    output.replace(pos, 2, IntToString(value));
+  }
+  return output;
 }
 }  // namespace openrdm
 }  // namespace plugin

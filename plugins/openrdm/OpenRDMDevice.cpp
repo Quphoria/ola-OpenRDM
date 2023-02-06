@@ -21,11 +21,11 @@ OpenRDMDevice::OpenRDMDevice(AbstractPlugin *owner,
                              const bool &rdm_enabled)
     : Device(owner, device_string),
       m_port_id(port_id),
-      m_dev_str(dev_str),
+      m_dev_str(device_string),
       m_dmx_refresh_ms(dmx_refresh_ms),
       m_rdm_enabled(rdm_enabled) {
 
-  m_widget = new OpenRDMWidget(dev_str, verbose, rdm_enabled, rdm_debug);
+  m_widget = new OpenRDMWidget(device_string, verbose, rdm_enabled, rdm_debug);
 }
 
 OpenRDMDevice::~OpenRDMDevice() {
@@ -34,7 +34,7 @@ OpenRDMDevice::~OpenRDMDevice() {
 }
 
 bool OpenRDMDevice::StartHook() {
-  AddPort(new OpenRDMOutputPort(this, m_port_id, m_widget.get(), m_dmx_refresh_ms, m_rdm_enabled));
+  AddPort(new OpenRDMOutputPort(this, m_port_id, m_widget, m_dev_str, m_dmx_refresh_ms, m_rdm_enabled));
   return true;
 }
 
@@ -45,11 +45,11 @@ OpenRDMOutputPort::OpenRDMOutputPort(OpenRDMDevice *parent,
                                      unsigned int dmx_refresh_ms,
                                      bool rdm_enabled)
   : BasicOutputPort(parent, id, rdm_enabled, rdm_enabled),
+    m_widget(widget),
+    m_thread(widget, dmx_refresh_ms, rdm_enabled),
     m_dev_str(device_string),
     m_dmx_refresh_ms(dmx_refresh_ms),
-    m_rdm_enabled(rdm_enabled),
-    m_widget(widget),
-    m_thread(widget, dmx_refresh_ms, rdm_enabled) {
+    m_rdm_enabled(rdm_enabled) {
   m_thread.Start();
 }
 
@@ -67,7 +67,7 @@ void OpenRDMOutputPort::SendRDMRequest(ola::rdm::RDMRequest *request,
     RunRDMCallback(callback, ola::rdm::RDM_FAILED_TO_SEND);
     return;
   }
-  m_thread->SendRDMRequest(request, callback);
+  m_thread.SendRDMRequest(request, callback);
 }
 
 void OpenRDMOutputPort::RunFullDiscovery(ola::rdm::RDMDiscoveryCallback *callback) {
@@ -76,7 +76,7 @@ void OpenRDMOutputPort::RunFullDiscovery(ola::rdm::RDMDiscoveryCallback *callbac
     callback->Run(uid_set);
     return;
   }
-  m_thread->RunFullDiscovery(callback);
+  m_thread.RunFullDiscovery(callback);
 }
 
 void OpenRDMOutputPort::RunIncrementalDiscovery(ola::rdm::RDMDiscoveryCallback *callback) {
@@ -85,7 +85,7 @@ void OpenRDMOutputPort::RunIncrementalDiscovery(ola::rdm::RDMDiscoveryCallback *
     callback->Run(uid_set);
     return;
   }
-  m_thread->RunIncrementalDiscovery(callback);
+  m_thread.RunIncrementalDiscovery(callback);
 }
 
 }  // namespace openrdm

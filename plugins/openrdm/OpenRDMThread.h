@@ -46,20 +46,20 @@ struct DMXMessage {
     std::array<uint8_t, DMX_MAX_LENGTH> data;
 };
 
-void dmx_thread(OpenRDMWidget *widget,
+void dmx_thread_f(OpenRDMWidget *widget,
                 unsigned int dmx_refresh_ms,
                 std::shared_ptr<counting_semaphore<SEMA_MAX>> dmx_sema,
-                std::mutex dmx_mutex,
+                std::shared_ptr<std::mutex> dmx_mutex,
                 std::shared_ptr<DMXMessage> dmx_data,
-                bool *exit_flag);
+                std::shared_ptr<bool> exit_flag);
 
-void rdm_thread(OpenRDMWidget *widget,
+void rdm_thread_f(OpenRDMWidget *widget,
                 std::shared_ptr<counting_semaphore<SEMA_MAX>> rdm_sema,
-                std::mutex rdm_mutex,
+                std::shared_ptr<std::mutex> rdm_mutex,
                 std::shared_ptr<std::queue<RDMMessage>> rdm_data,
-                std::mutex tod_mutex,
+                std::shared_ptr<std::mutex> tod_mutex,
                 std::shared_ptr<UIDSet> tod,
-                bool *exit_flag);
+                std::shared_ptr<bool> exit_flag);
 
 class OpenRDMThread {
     public:
@@ -87,13 +87,13 @@ class OpenRDMThread {
 
         std::shared_ptr<counting_semaphore<SEMA_MAX>> dmx_sema = std::shared_ptr<counting_semaphore<SEMA_MAX>>();
         std::shared_ptr<counting_semaphore<SEMA_MAX>> rdm_sema = std::shared_ptr<counting_semaphore<SEMA_MAX>>(); 
-        std::mutex dmx_mutex;
-        std::mutex rdm_mutex;
+        std::shared_ptr<std::mutex> dmx_mutex;
+        std::shared_ptr<std::mutex> rdm_mutex;
         std::shared_ptr<DMXMessage> dmx_data = std::shared_ptr<DMXMessage>();
         std::shared_ptr<std::queue<RDMMessage>> rdm_data = std::shared_ptr<std::queue<RDMMessage>>();
-        bool exit_flag = false;
+        std::shared_ptr<bool> exit_flag;
 
-        std::mutex tod_mutex;
+        std::shared_ptr<std::mutex> tod_mutex;
         std::shared_ptr<UIDSet> tod = std::shared_ptr<UIDSet>(); 
         
         DISALLOW_COPY_AND_ASSIGN(OpenRDMThread);

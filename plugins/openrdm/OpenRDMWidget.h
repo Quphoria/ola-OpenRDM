@@ -6,6 +6,8 @@
 #include <vector>
 #include <mutex>
 
+#include "ola/rdm/UID.h"
+#include "ola/rdm/UIDSet.h"
 #include "plugins/openrdm/OpenRDMDriver.h"
 #include "plugins/openrdm/rdm.h"
 
@@ -31,7 +33,7 @@ class OpenRDMWidget {
         UIDSet fullRDMDiscovery(); // Returns full TOD
         std::pair<UIDSet, UIDSet> incrementalRDMDiscovery(); // Returns pair: added devices, removed devices
     protected:
-        UIDSet discover(UID start, UID end);
+        UIDSet discover(uint64_t start, uint64_t end);
         UIDSet getProxyTOD(UID addr);
         bool hasProxyTODChanged(UID addr);
         bool sendMute(UID addr, bool unmute, bool &is_proxy);
