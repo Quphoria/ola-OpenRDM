@@ -167,8 +167,6 @@ void dmx_thread_f(OpenRDMWidget *widget,
                 std::shared_ptr<std::mutex> dmx_mutex,
                 std::shared_ptr<DMXMessage> dmx_data,
                 std::shared_ptr<bool> exit_flag) {
-    if (!widget->isInitialized()) return;
-
     auto dmx_timeout = std::chrono::milliseconds(dmx_refresh_ms);
     
     int length;
@@ -178,6 +176,14 @@ void dmx_thread_f(OpenRDMWidget *widget,
 
     while (!(*exit_flag)) {
         bool sema_acquired = dmx_sema->wait_for(dmx_timeout);
+        if (!widget->isInitialized()) {
+            OLA_WARN << "OPENRDM DMX Thread: Widget " << std::to_string(widget->portID()) << " not Initialized";
+            if (*exit_flag) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(THREAD_REINIT_TIMEOUT_MS));
+            widget->init();
+            continue;
+        }
+
         if (sema_acquired) {
             dmx_mutex->lock();
             dmx_changed = dmx_data->changed;
@@ -218,15 +224,17 @@ void rdm_thread_f(OpenRDMWidget *widget,
                 std::shared_ptr<std::mutex> tod_mutex,
                 std::shared_ptr<UIDSet> tod,
                 std::shared_ptr<bool> exit_flag) {
-    // Not too fussed about RDM working just yet
-    // Get DMX working first
-    return;
-    if (!widget->isInitialized()) return;
-
     auto rdm_timeout = std::chrono::milliseconds(RDM_SEMA_TIMEOUT_MS);
 
     while (!(*exit_flag)) {
         bool sema_acquired = rdm_sema->wait_for(rdm_timeout);
+        if (!widget->isInitialized()) {
+            OLA_WARN << "OPENRDM RDM Thread: Widget " << std::to_string(widget->portID()) << " not Initialized";
+            if (*exit_flag) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(THREAD_REINIT_TIMEOUT_MS));
+            continue;
+        }
+
         if (sema_acquired) {
             rdm_mutex->lock();
             // Handle RDM messages 1 message at a time so we don't halt the dmx too much

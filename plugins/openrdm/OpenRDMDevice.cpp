@@ -25,7 +25,7 @@ OpenRDMDevice::OpenRDMDevice(AbstractPlugin *owner,
       m_dmx_refresh_ms(dmx_refresh_ms),
       m_rdm_enabled(rdm_enabled) {
 
-  m_widget = new OpenRDMWidget(device_string, verbose, rdm_enabled, rdm_debug);
+  m_widget = new OpenRDMWidget(port_id, device_string, verbose, rdm_enabled, rdm_debug);
 }
 
 OpenRDMDevice::~OpenRDMDevice() {

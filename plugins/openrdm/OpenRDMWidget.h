@@ -22,7 +22,7 @@ class OpenRDMWidget {
     public:
         bool verbose, rdm_enabled, rdm_debug;
         OpenRDMWidget();
-        OpenRDMWidget(std::string ftdi_description, bool verbose, bool rdm_enabled, bool rdm_debug);
+        OpenRDMWidget(unsigned int port_id, std::string ftdi_description, bool verbose, bool rdm_enabled, bool rdm_debug);
         ~OpenRDMWidget();
         bool init();
         void deinit();
@@ -32,6 +32,7 @@ class OpenRDMWidget {
         std::pair<int, RDMData> writeRDM(uint8_t *data, int len);
         UIDSet fullRDMDiscovery(); // Returns full TOD
         std::pair<UIDSet, UIDSet> incrementalRDMDiscovery(); // Returns pair: added devices, removed devices
+        unsigned int portID() { return port_id; }
     protected:
         UIDSet discover(uint64_t start, uint64_t end);
         UIDSet getProxyTOD(UID addr);
@@ -39,6 +40,7 @@ class OpenRDMWidget {
         bool sendMute(UID addr, bool unmute, bool &is_proxy);
         std::vector<RDMPacket> sendRDMPacket(RDMPacket pkt, unsigned int retries = 10, double max_time_ms = 2000);
     private:
+        unsigned int port_id;
         bool initialized = false;
         bool discovery_in_progress;
         struct ftdi_context ftdi;

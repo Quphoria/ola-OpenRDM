@@ -15,7 +15,7 @@ using ola::rdm::UID;
 using ola::rdm::UIDSet;
 
 OpenRDMWidget::OpenRDMWidget()
-        :uid(UID(0, 0)) {
+        :port_id(0), uid(UID(0, 0)) {
     this->ftdi_description = "";
     this->verbose = 0;
     this->rdm_enabled = false;
@@ -23,8 +23,8 @@ OpenRDMWidget::OpenRDMWidget()
     this->dev_mutex = std::unique_ptr<std::mutex>(new std::mutex());
 }
 
-OpenRDMWidget::OpenRDMWidget(std::string ftdi_description, bool verbose, bool rdm_enabled, bool rdm_debug)
-        :uid(UID(0, 0)) {
+OpenRDMWidget::OpenRDMWidget(unsigned int port_id, std::string ftdi_description, bool verbose, bool rdm_enabled, bool rdm_debug)
+        :port_id(port_id), uid(UID(0, 0)) {
     this->ftdi_description = ftdi_description;
     this->verbose = verbose;
     this->rdm_enabled = rdm_enabled;
@@ -113,6 +113,8 @@ void OpenRDMWidget::writeDMX(uint8_t *data, int len) {
     if (ret < 0) { // Error occurred
         // -666: USB device unavailable, wait a bit to avoid spam
         if (ret == -666) std::this_thread::sleep_for(std::chrono::seconds(1));
+        //  -19: usb bulk write failed, device disconnected
+        if (ret == -19) deinit();
     }
 }
 

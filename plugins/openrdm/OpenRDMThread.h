@@ -28,6 +28,7 @@ using ola::rdm::UIDSet;
 static const unsigned int SEMA_MAX = 0xffff;
 static const unsigned int RDM_SEMA_TIMEOUT_MS = 1000;
 static const unsigned int RDM_QUEUE_MAX_LENGTH = 100;
+static const unsigned int THREAD_REINIT_TIMEOUT_MS = 1000;
 
 static const unsigned int RDM_DATA = 0;
 static const unsigned int RDM_FULL_DISCOVERY = 1;
